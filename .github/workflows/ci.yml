@@ -27,12 +27,14 @@ jobs:
       matrix:
         cc: ['gcc', 'clang']
         container:
-          - 'ubuntu:18.04'
+          # We generally try to support the same set of platforms as shadow does.
+          # See https://shadow.github.io/docs/guide/supported_platforms.html
           - 'ubuntu:20.04'
+          - 'ubuntu:22.04'
           - 'debian:10-slim'
           - 'debian:11-slim'
-          - 'fedora:34'
-          - 'quay.io/centos/centos:stream8'
+          - 'debian:12-slim'
+          - 'fedora:37'
     steps:
       - name: Update packages
         run: |
@@ -52,16 +54,13 @@ jobs:
               apt-get install -y \
                 ${{ matrix.cc }} \
                 cmake \
-                libglib2.0-0 \
                 libglib2.0-dev \
-                libigraph0v5 \
-                libigraph0-dev
+                libigraph-dev
               ;;
             debian*)
               apt-get install -y \
                 ${{ matrix.cc }} \
                 cmake \
-                libglib2.0-0 \
                 libglib2.0-dev \
                 libigraph-dev
               ;;
@@ -69,19 +68,8 @@ jobs:
               dnf install -y \
                 ${{ matrix.cc }} \
                 cmake \
-                glib2 \
                 glib2-devel \
-                igraph \
                 igraph-devel
-              ;;
-            *centos*stream8)
-              dnf install -y \
-                ${{ matrix.cc }} \
-                cmake \
-                glib2 \
-                glib2-devel
-              dnf install -y https://dl.fedoraproject.org/pub/archive/epel/7.7/x86_64/Packages/i/igraph-0.7.1-12.el7.x86_64.rpm
-              dnf install -y https://dl.fedoraproject.org/pub/archive/epel/7.7/x86_64/Packages/i/igraph-devel-0.7.1-12.el7.x86_64.rpm
               ;;
             *)
               echo "Unhandled container ${{ matrix.container }}"
@@ -89,7 +77,7 @@ jobs:
           esac
 
       - name: Build tgen
-        run: mkdir -p build && cd build && CC=${{ matrix.cc }} cmake .. && make
+        run: mkdir -p build && cd build && CC=${{ matrix.cc }} cmake -DCMAKE_C_FLAGS="-Wall -Werror" .. && make
 
       - name: Install test dependencies
         run: |
@@ -131,7 +119,6 @@ jobs:
             fedora*)
               dnf install -y \
                 cmake \
-                glib2 \
                 glib2-devel \
                 libdeflate \
                 python3 \
@@ -142,15 +129,12 @@ jobs:
             *centos*)
               dnf install -y \
                 cmake \
-                glib2 \
                 glib2-devel \
-                libjpeg-turbo \
                 libjpeg-turbo-devel \
                 platform-python-devel \
                 python3 \
                 python3-pip \
                 xz \
-                zlib \
                 zlib-devel
 
               pip3 install virtualenv
@@ -165,7 +149,7 @@ jobs:
           python3 -m venv build/toolsenv
           source build/toolsenv/bin/activate
           # Drastically improves time to install requirements on platforms with
-          # older pip in system backages, such as debian-10.
+          # older pip in system packages, such as debian-10.
           pip3 install --upgrade pip
 
           pip3 install -r tools/requirements.txt
